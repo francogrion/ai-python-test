@@ -157,6 +157,7 @@ class Pipeline:
             self._fail(record, error.reason)
         else:
             record.status = Status.SENT
+            self._store.finish(record)
             logger.info("id=%s sent", record.id)
 
     async def _send(self, record: RequestRecord) -> str | None:
@@ -165,11 +166,13 @@ class Pipeline:
             return await self._provider.notify(record.notification, trace_id=record.id)
         except DeliveryRetryable as error:
             if error.rate_limited:
-                self._limiter.pause(error.retry_after or self._settings.rate_limit_pause)
+                retry_after = error.retry_after
+                self._limiter.pause(self._settings.rate_limit_pause if retry_after is None else retry_after)
             raise
 
     def _fail(self, record: RequestRecord, reason: str) -> None:
         record.status = Status.FAILED
         record.failure_reason = reason
+        self._store.finish(record)
         self._failures[reason] += 1
         logger.info("id=%s failed reason=%s", record.id, reason)

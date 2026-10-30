@@ -23,6 +23,27 @@ def test_get_unknown_id_returns_none():
     assert InMemoryStore().get("nope") is None
 
 
+def test_the_oldest_finished_requests_are_forgotten_past_the_limit():
+    store = InMemoryStore(max_finished=2)
+    first, second, third = store.create("a"), store.create("b"), store.create("c")
+    store.finish(first)
+    store.finish(second)
+    store.finish(third)
+
+    assert store.get(first.id) is None
+    assert store.get(second.id) is second
+    assert store.get(third.id) is third
+
+
+def test_requests_in_progress_are_never_forgotten():
+    store = InMemoryStore(max_finished=1)
+    pending = store.create("a")
+    store.finish(store.create("b"))
+    store.finish(store.create("c"))
+
+    assert store.get(pending.id) is pending
+
+
 def test_counts_group_requests_by_status():
     store = InMemoryStore()
     store.create("a")

@@ -192,6 +192,13 @@ async def test_a_429_without_retry_after_uses_the_default_pause(harness):
     assert h.limiter.pauses == [FAST.rate_limit_pause]
 
 
+async def test_a_429_with_a_zero_retry_after_is_honoured(harness):
+    h = await harness(FakeProvider(deliveries=[DeliveryRetryable(rate_limited=True, retry_after=0), "p-2"]))
+    await h.run()
+
+    assert h.limiter.pauses == [0]
+
+
 async def test_retrying_delivery_does_not_repeat_the_extraction(harness):
     h = await harness(FakeProvider(deliveries=[DeliveryRetryable(), DeliveryRetryable(), "p-2"]))
     await h.run()
@@ -301,6 +308,14 @@ async def test_a_blocked_delivery_does_not_hold_back_extraction(harness):
     release.set()
     await h.pipeline.join()
     assert h.store.counts()["sent"] == 3
+
+
+async def test_finished_requests_are_reported_to_the_store(harness):
+    h = await harness(FakeProvider([REFUSAL, REFUSAL]))
+    failed = await h.run()
+    sent = await h.run()
+
+    assert h.store.finished() == [failed.id, sent.id]
 
 
 async def test_metrics_report_calls_and_failures(harness):

@@ -24,7 +24,7 @@ def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTrans
         http = create_http_client(settings, transport)
         provider = ProviderClient(http, settings.notify_read_timeout)
         limiter = RateLimiter(settings.notify_rate_per_second)
-        app.state.store = InMemoryStore()
+        app.state.store = InMemoryStore(settings.max_finished_requests)
         app.state.pipeline = Pipeline(app.state.store, provider, limiter, settings)
         await app.state.pipeline.start()
         yield

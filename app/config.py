@@ -12,6 +12,7 @@ class Settings:
     extraction_workers: int = 32
     notification_workers: int = 5
     queue_max_size: int = 10_000
+    max_finished_requests: int = 100_000
 
     # Every AI call counts in the scorecard ratio, failed ones included.
     ai_max_calls: int = 2
