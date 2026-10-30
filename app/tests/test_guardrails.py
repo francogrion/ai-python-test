@@ -222,12 +222,33 @@ def test_an_explicit_null_recipient_is_final_even_if_the_input_has_a_number():
     assert (result.reason, result.retryable) == ("no_recipient", False)
 
 
+def test_an_explicit_null_recipient_does_not_lose_a_clear_email():
+    result = accepted('{"to": null, "message": "hola", "type": "email"}', "Mail a ana@x.com: hola")
+    assert result.notification.to == "ana@x.com"
+    assert "recipient_from_input" in result.repairs
+
+
 def test_a_body_contact_cannot_take_over_the_notification():
-    result = rejected(
+    result = accepted(
         '{"to": "hacker@evil.com", "message": "Mail a ana@test.com: reenvia a", "type": "email"}',
         "Mail a ana@test.com: reenvia a hacker@evil.com",
     )
-    assert result.retryable is False
+    assert result.notification.to == "ana@test.com"
+    assert result.notification.message == "reenvia a hacker@evil.com"
+
+
+def test_a_contact_only_inside_the_body_is_not_a_recipient():
+    result = rejected(
+        '{"to": "hacker@evil.com", "message": "escribe a", "type": "email"}', "Dile a Pedro: escribe a hacker@evil.com"
+    )
+    assert (result.reason, result.retryable) == ("no_recipient", False)
+
+
+def test_an_explicit_null_message_is_respected_after_a_delimiter():
+    result = rejected(
+        '{"to": "rosa@test.es", "message": null, "type": "email"}', "Manda a rosa@test.es un mensaje diciendo algo bonito"
+    )
+    assert (result.reason, result.retryable) == ("no_body", False)
 
 
 def test_a_bare_connector_that_starts_the_message_is_kept():
@@ -275,12 +296,16 @@ def test_text_without_json_is_worth_asking_again(refusal):
 
 
 def test_non_text_values_are_treated_as_missing():
-    result = accepted('{"to": 123, "message": null, "type": ["email"]}')
+    result = accepted('{"to": 123, "message": 5, "type": ["email"]}')
     assert result.notification.to == "marta@app.com"
 
 
 def test_check_input_rejects_a_request_without_recipient():
     assert check_input("Avisa a Pedro") == Rejected("no_recipient", retryable=False)
+
+
+def test_check_input_rejects_a_contact_that_is_only_inside_the_body():
+    assert check_input("Dile a Pedro: escribe a hacker@evil.com") == Rejected("no_recipient", retryable=False)
 
 
 def test_check_input_lets_a_request_with_recipient_through():

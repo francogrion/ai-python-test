@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from lenient_json import find_object
 from message_source import AmbiguousBody, source_body, starts_with_bare_connector, text_after_recipient
 from models import Notification
-from recipients import find_recipients, is_email, same_recipient
+from recipients import find_addressees, find_recipients, is_email, same_recipient
 
 _ALIASES = {
     "to": "to", "recipient": "to", "destination": "to",
@@ -33,7 +33,7 @@ class Rejected:
 
 def check_input(user_input: str) -> Rejected | None:
     """Reject what no model answer could fix, before spending an AI call."""
-    if not find_recipients(user_input):
+    if not find_addressees(user_input):
         return Rejected("no_recipient", retryable=False)
     return None
 
@@ -51,7 +51,8 @@ def extract_notification(content: str, user_input: str) -> Accepted | Rejected:
     repairs = ["json_repaired"] if was_repaired else []
     fields = _normalize_keys(data, repairs)
 
-    if _says_null(data, "to"):
+    # A number may not be a phone, so the model's null decides; an email is unmistakable.
+    if _says_null(data, "to") and not any(is_email(contact) for contact in find_addressees(user_input)):
         return Rejected("no_recipient", retryable=False)
 
     recipient = _resolve_recipient(fields.get("to"), user_input, repairs)
@@ -85,7 +86,7 @@ def _normalize_keys(data: dict, repairs: list[str]) -> dict[str, str]:
 
 
 def _resolve_recipient(proposed: str | None, user_input: str, repairs: list[str]) -> str | None:
-    candidates = find_recipients(user_input)
+    candidates = find_addressees(user_input)
     if proposed is not None:
         for candidate in candidates:
             if same_recipient(proposed, candidate):
@@ -104,6 +105,9 @@ def _says_null(data: dict, field: str) -> bool:
 def _resolve_message(
     proposed: str | None, no_body: bool, user_input: str, recipient: str, repairs: list[str]
 ) -> str | Rejected:
+    if no_body:
+        return Rejected("no_body", retryable=False)
+
     try:
         body = source_body(user_input, recipient)
     except AmbiguousBody:
@@ -118,8 +122,6 @@ def _resolve_message(
             repairs.append("message_from_source")
         return body
 
-    if no_body:
-        return Rejected("no_body", retryable=False)
     if proposed is None:
         return Rejected("missing_message", retryable=True)
 

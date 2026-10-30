@@ -20,6 +20,11 @@ def find_recipients(text: str) -> list[str]:
     return recipients
 
 
+def find_addressees(text: str) -> list[str]:
+    """Return the recipients before the body: a contact after a colon is content."""
+    return find_recipients(re.split(r":\s", text, maxsplit=1)[0])
+
+
 def is_email(recipient: str) -> bool:
     return _EMAIL.fullmatch(recipient) is not None
 
