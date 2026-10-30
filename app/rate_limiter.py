@@ -24,11 +24,10 @@ class RateLimiter:
         self._next_slot = 0.0
 
     async def acquire(self) -> None:
-        now = self._clock()
-        slot = max(self._next_slot, now)
-        self._next_slot = slot + self._interval
-        if slot > now:
-            await self._sleep(slot - now)
+        # Checked again after each sleep, so a pause also reaches callers already waiting.
+        while (now := self._clock()) < self._next_slot:
+            await self._sleep(self._next_slot - now)
+        self._next_slot = now + self._interval
 
     def pause(self, seconds: float) -> None:
         self._next_slot = max(self._next_slot, self._clock() + seconds)

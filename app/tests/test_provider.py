@@ -105,6 +105,8 @@ async def test_failures_before_delivery_are_retryable(handler):
         (respond(401), "provider_rejected"),
         (respond(422), "provider_rejected"),
         (raising(httpx.ReadTimeout("slow")), "delivery_unknown"),
+        (respond(502), "delivery_unknown"),
+        (respond(504), "delivery_unknown"),
     ],
 )
 async def test_final_notify_failures(handler, reason):

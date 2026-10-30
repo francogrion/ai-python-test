@@ -15,7 +15,7 @@ class AIUnavailable(Exception):
 
 
 class DeliveryRetryable(Exception):
-    """The notification was not delivered and trying again is safe."""
+    """The provider did not take the notification, so trying again should not duplicate it."""
 
     def __init__(self, rate_limited: bool = False, retry_after: float | None = None) -> None:
         super().__init__(f"rate_limited={rate_limited} retry_after={retry_after}")
@@ -72,6 +72,9 @@ class ProviderClient:
 
         if response.status_code == 429:
             raise DeliveryRetryable(rate_limited=True, retry_after=_retry_after(response))
+        if response.status_code in (502, 504):
+            # A gateway error says nothing about whether the provider delivered it.
+            raise DeliveryFailed("delivery_unknown")
         if response.status_code >= 500:
             raise DeliveryRetryable()
         if response.status_code >= 400:

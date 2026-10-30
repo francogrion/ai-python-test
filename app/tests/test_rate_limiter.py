@@ -76,6 +76,22 @@ async def test_pause_delays_the_next_acquire(time_source):
     assert time_source.now == pytest.approx(1002.0)
 
 
+async def test_a_pause_also_holds_back_a_caller_already_waiting(time_source):
+    pauses = []
+
+    async def sleep_and_pause_once(seconds):
+        await time_source.sleep(seconds)
+        if not pauses:
+            pauses.append(seconds)
+            bucket.pause(5)
+
+    bucket = RateLimiter(2, clock=time_source.clock, sleep=sleep_and_pause_once)
+    await bucket.acquire()
+    await bucket.acquire()
+
+    assert time_source.now == pytest.approx(1005.5)
+
+
 async def test_pause_never_shortens_a_longer_pause(time_source):
     bucket = limiter(time_source)
     bucket.pause(5)
