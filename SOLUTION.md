@@ -10,10 +10,10 @@ Suite oficial de k6 con `docker compose`, sin modificar `provider/`, `platform/`
 |---|---|
 | Checks de k6 | 100% (19.243 / 19.243) |
 | Disponibilidad | 100% (0 de 8.247 peticiones fallidas) |
-| Latencia HTTP media / p95 | 0,6 ms / 1,19 ms |
-| Llamadas a la IA por petición | 1,09 (2.986 / 2.749; umbral verde: 1,5) |
-| Entregadas al vaciarse la cola | 2.729 / 2.749 (99,3%) |
-| Fallos | 20, todos por rechazo de la IA en las dos llamadas |
+| Latencia HTTP media / p95 | 0,7 ms / 1,49 ms |
+| Llamadas a la IA por petición | 1,10 (3.020 / 2.749; umbral verde: 1,5) |
+| Entregadas al vaciarse la cola | 2.721 / 2.749 (99,0%) |
+| Fallos | 28, todos por rechazo de la IA en las dos llamadas |
 | Respuestas 429 del provider | 0 |
 
 k6 acaba en 40 s, pero la entrega está limitada por el provider: la cola tarda unos 10 minutos en vaciarse a 4,5 envíos/s. Durante la prueba, la mayoría de peticiones sigue en `queued` o `processing`, que son estados válidos.
@@ -99,7 +99,7 @@ El modelo propone y el texto del usuario decide.
 - **Canal:** lo decide el formato del destinatario.
 - **Mensaje:** si hay un delimitador junto al destinatario (`:`, `diciendo que`, `que`...), se envía el cuerpo del input. Sin delimitador, el del modelo debe coincidir con todo el texto que sigue al destinatario, porque un fragmento no demuestra nada. Si el destinatario va al final, basta con que aparezca en el input y no lo contenga. Un delimitador ambiguo, como un `:` alejado del destinatario, falla. Un `message: null` del modelo también, sin reintentar.
 
-La regla del mensaje existe porque el mock devuelve los primeros 50 caracteres del comando cuando no hay `:`, y `00` para `cita a las 10:00`. En la ejecución medida se activó en 2.061 peticiones. `test_guardrails_against_mock.py` pasa el `provider/responses.py` real por los guardrails con los 4 prompts de k6: toda respuesta que no es un rechazo se recupera con destinatario, canal y mensaje exactos.
+La regla del mensaje existe porque el mock devuelve los primeros 50 caracteres del comando cuando no hay `:`, y `00` para `cita a las 10:00`. En la ejecución medida se activó en 2.025 peticiones. `test_guardrails_against_mock.py` pasa el `provider/responses.py` real por los guardrails con los 4 prompts de k6: toda respuesta que no es un rechazo se recupera con destinatario, canal y mensaje exactos.
 
 ## Resiliencia
 
