@@ -74,11 +74,12 @@ El reintento no reenvía la respuesta errónea, porque ancla al modelo en ella. 
 
 El mock ignora el system prompt, así que el prompt se midió aparte con `evaluation/run.py` sobre dos modelos reales: Claude Opus 5.5 (API, esfuerzo `low`) y Qwen 2.5 3B cuantizado (local con Ollama, temperatura 0). `cases.json` tiene 33 casos en español e inglés, 3 repeticiones cada uno; `holdout.json` tiene 11 y `holdout2.json` 12. No se envía ninguna notificación. Los informes están en `evaluation/results/`.
 
-| Qwen 2.5 3B, prompt final | `cases` | `holdout` | `holdout2` |
-|---|---|---|---|
-| Correctas sin ayuda de los guardrails | 73 / 99 | 8 / 11 | 7 / 12 |
-| Correctas tras los guardrails | 99 / 99 | 10 / 11 | 10 / 12 |
-| Aceptaciones incorrectas | 0 | 0 | 2 |
+| Prompt final | Opus `cases` | Opus `holdout2` | Qwen `cases` | Qwen `holdout` | Qwen `holdout2` |
+|---|---|---|---|---|---|
+| Correctas sin ayuda de los guardrails | 93 / 99 | 9 / 12 | 73 / 99 | 8 / 11 | 7 / 12 |
+| Correctas tras los guardrails | 99 / 99 | 12 / 12 | 99 / 99 | 10 / 11 | 10 / 12 |
+| Aceptaciones incorrectas | 0 | 0 | 0 | 0 | 2 |
+| Reintentos | 3 | 2 | 3 | 0 | 1 |
 
 **Cómo leer estas cifras:**
 - Solo `holdout2` es una medida independiente: se escribió antes de los últimos cambios y no se ajustó nada después de correrlo. `cases` y `holdout` ya influyeron en los guardrails.
@@ -86,7 +87,9 @@ El mock ignora el system prompt, así que el prompt se midió aparte con `evalua
 - Las 2 aceptaciones incorrectas de `holdout2` son mensajes descritos (`something encouraging`, `un saludo de cumpleaños`). Distinguirlos requiere entender el significado: una regla léxica no alcanza, y este modelo pequeño ignora esa instrucción del prompt.
 - El fallo restante de `holdout` es seguro: `h-subject-colon` se rechaza por ambiguo, aunque el cuerpo estaba claro para una persona.
 
-**Opus 5.5:** dio 93/99 sin ayuda, 99/99 tras los guardrails y 0 aceptaciones incorrectas, con 9 reintentos aceptados por la API. Esa corrida es **anterior** al prompt final y no incluyó los holdouts, así que no es comparable con la tabla.
+- Las 2 aceptaciones incorrectas solo aparecen con el modelo pequeño: Opus devolvió `null` en esos casos. El modelo elegido importa tanto como los guardrails.
+- Opus no corrió `holdout`, que ya había influido en los cambios. Los holdouts se corrieron una sola vez por caso.
+- Todos los reintentos de Opus fueron aceptados por la API.
 
 Son pocos casos escritos a mano: sirven como comprobación, no como estimación de precisión en producción.
 
