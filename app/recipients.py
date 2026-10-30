@@ -1,0 +1,39 @@
+"""Detect and compare the email addresses and phone numbers in a text."""
+
+import re
+
+# The lookbehind tries each word only once, which keeps the scan linear on long inputs.
+_EMAIL = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+_PHONE = re.compile(r"(?<![\w+])(?!\d{4}-\d{2}-\d{2})\+?\d(?:[ -]?\d){8,14}(?!\w)")
+
+
+def find_recipients(text: str) -> list[str]:
+    """Return the distinct recipients in order of appearance, as written."""
+    emails = list(_EMAIL.finditer(text))
+    without_emails = _EMAIL.sub(lambda match: " " * len(match.group()), text)
+    matches = sorted([*emails, *_PHONE.finditer(without_emails)], key=lambda match: match.start())
+
+    recipients: list[str] = []
+    for match in matches:
+        if not any(same_recipient(match.group(), known) for known in recipients):
+            recipients.append(match.group())
+    return recipients
+
+
+def find_addressees(text: str) -> list[str]:
+    """Return the recipients before the body: a contact after a colon is content."""
+    return find_recipients(re.split(r":\s", text, maxsplit=1)[0])
+
+
+def is_email(recipient: str) -> bool:
+    return _EMAIL.fullmatch(recipient) is not None
+
+
+def same_recipient(first: str, second: str) -> bool:
+    if is_email(first) or is_email(second):
+        return first.casefold() == second.casefold()
+    return _digits(first) == _digits(second)
+
+
+def _digits(phone: str) -> str:
+    return re.sub(r"\D", "", phone)
