@@ -1,0 +1,157 @@
+{
+  "model": "hf.co/Qwen/Qwen2.5-3B-Instruct-GGUF:Q4_K_M",
+  "repeats": 1,
+  "prompt_sha256": "8b6e262d1c1887783144f2aec5347a4c95607659233cfcb946ca1ef0e840caa7",
+  "created_at": "2026-10-30T10:38:37.159204+00:00",
+  "summary": {
+    "total": 11,
+    "raw_correct": 8,
+    "pipeline_correct": 8,
+    "incorrect_acceptances": 2,
+    "retries": 1
+  },
+  "failures": [
+    {
+      "case_id": "h-subject-colon",
+      "answer": "{\"to\": \"sara@mail.com\", \"message\": \"about the invoice: it is overdue\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": false,
+      "pipeline_correct": false,
+      "incorrect_acceptance": true,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-para-decirle",
+      "answer": "{\"to\": \"644555666\", \"message\": \"llegué bien\", \"type\": \"sms\"}",
+      "outcome": "rejected:message_unverified",
+      "raw_correct": true,
+      "pipeline_correct": false,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-described",
+      "answer": "{\"to\": \"rosa@test.es\", \"message\": \"algo bonito\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": false,
+      "pipeline_correct": false,
+      "incorrect_acceptance": true,
+      "retry_reason": null,
+      "retried": false
+    }
+  ],
+  "results": [
+    {
+      "case_id": "h-colon",
+      "answer": "{\"to\": \"lucia@correo.es\", \"message\": \"la factura ya está pagada\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-diciendo",
+      "answer": "{\"to\": \"611222333\", \"message\": \"ya salí de casa\", \"type\": \"sms\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-no-delimiter",
+      "answer": "{\"to\": \"dan@corp.io\", \"message\": \"the server is back online\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-subject-colon",
+      "answer": "{\"to\": \"sara@mail.com\", \"message\": \"about the invoice: it is overdue\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": false,
+      "pipeline_correct": false,
+      "incorrect_acceptance": true,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-para-decirle",
+      "answer": "{\"to\": \"644555666\", \"message\": \"llegué bien\", \"type\": \"sms\"}",
+      "outcome": "rejected:message_unverified",
+      "raw_correct": true,
+      "pipeline_correct": false,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-de-que",
+      "answer": "{\"to\": \"tomas@empresa.com\", \"message\": \"la reunión se canceló\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-saying",
+      "answer": "{\"to\": \"622333444\", \"message\": \"the car is ready\", \"type\": \"sms\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-keep-case",
+      "answer": "{\"to\": \"rosa@test.es\", \"message\": \"Mañana NO abrimos.\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-no-body",
+      "answer": "{\"to\": \"rosa@test.es\", \"message\": null, \"type\": \"email\"}",
+      "outcome": "rejected:missing_message",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": "missing_message",
+      "retried": true
+    },
+    {
+      "case_id": "h-described",
+      "answer": "{\"to\": \"rosa@test.es\", \"message\": \"algo bonito\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": false,
+      "pipeline_correct": false,
+      "incorrect_acceptance": true,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-two-phones",
+      "answer": "{\"to\": \"644555666\", \"message\": \"hola\", \"type\": \"sms\"}{\"to\": \"633444555\", \"message\": \"hola\", \"type\": \"sms\"}",
+      "outcome": "rejected:message_unverified",
+      "raw_correct": false,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    }
+  ]
+}

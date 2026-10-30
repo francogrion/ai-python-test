@@ -72,18 +72,24 @@ El reintento no reenvía la respuesta errónea, porque ancla al modelo en ella. 
 
 ### Evaluación con un modelo real
 
-El mock ignora el system prompt, así que el prompt se midió aparte con `evaluation/run.py`: 33 casos en español e inglés (26 válidos y 7 que deben rechazarse), 3 repeticiones cada uno, en Claude Opus 5.5 con esfuerzo `low`. No se envía ninguna notificación.
+El mock ignora el system prompt, así que el prompt se midió aparte con `evaluation/run.py` sobre dos modelos reales: Claude Opus 5.5 (API, esfuerzo `low`) y Qwen 2.5 3B cuantizado (local con Ollama, temperatura 0). `cases.json` tiene 33 casos en español e inglés, 3 repeticiones cada uno; `holdout.json` tiene 11 casos más. No se envía ninguna notificación. Los informes están en `evaluation/results/`.
 
-| Métrica | Resultado |
-|---|---|
-| Correctas sin ayuda de los guardrails | 93 / 99 |
-| Correctas tras los guardrails | 99 / 99 |
-| Aceptaciones incorrectas | 0 |
-| Reintentos con pista | 9, todos aceptados por la API |
+| Métrica | Opus 5.5 | Qwen 2.5 3B | Qwen 2.5 3B, holdout |
+|---|---|---|---|
+| Correctas sin ayuda de los guardrails | 93 / 99 | 72 / 99 | 8 / 11 |
+| Correctas tras los guardrails | 99 / 99 | 99 / 99 | 8 / 11 |
+| Aceptaciones incorrectas | 0 | 0 | 2 |
 
-Las 6 respuestas no exactas son `two-recipients` y `ambiguous-body`: el modelo devolvió datos en lugar de `null` y los guardrails rechazaron la petición, que era lo esperado. En `two-recipients`, el reintento eligió un solo destinatario en las 3 repeticiones, y `multiple_recipients` lo detuvo. El prompt no necesitó cambios. El informe está en `evaluation/results/`.
+**Cómo leer estas cifras:**
+- La primera corrida de Qwen dio 90/99 y 9 aceptaciones incorrectas (3 casos, porque a temperatura 0 las repeticiones son idénticas): fragmentos del mensaje que pasaban por aparecer en el input. Eso llevó a endurecer los guardrails, así que el 99/99 de Qwen ya no es una medida independiente.
+- `holdout.json` se escribió después de ese arreglo y solo se corrió con Qwen. Es la cifra más honesta, y muestra los límites de la validación léxica:
+  - `h-subject-colon`: se envió `about the invoice: it is overdue`, con el asunto incluido.
+  - `h-described`: se envió `algo bonito`, que describe un mensaje en lugar de serlo.
+  - `h-para-decirle`: se rechazó un mensaje correcto, porque `para decirle que` no es un conector conocido. Es un fallo seguro.
+- El 99/99 de Opus es la corrida real anterior a ese endurecimiento, recalificada con los guardrails finales. No se repitió contra la API.
+- Los 9 reintentos de Opus fueron aceptados por la API. En `two-recipients`, el reintento eligió un solo destinatario las 3 veces y los guardrails lo detuvieron.
 
-**Alcance:** son pocos casos escritos a mano, con un solo modelo. Sirve como comprobación, no como estimación de precisión en producción.
+No se ajustaron los guardrails a los fallos del holdout, para no convertirlo en otro conjunto de entrenamiento. Son pocos casos escritos a mano: sirven como comprobación, no como estimación de precisión en producción.
 
 ## Guardrails
 
@@ -92,7 +98,7 @@ El modelo propone y el texto del usuario decide.
 - **JSON:** primero parseo estricto; después un lector tolerante por tokens para comillas simples, claves sin comillas y objetos truncados. No reescribe el contenido de las cadenas, y un valor cortado se descarta, no se completa.
 - **Destinatario:** debe aparecer en el input y se envía tal como lo escribió el usuario. Si no hay ninguno, la petición falla sin llamar a la IA. Si va dirigida a varios, falla con `multiple_recipients`; los contactos dentro del cuerpo son contenido y no cuentan.
 - **Canal:** lo decide el formato del destinatario.
-- **Mensaje:** si hay un delimitador junto al destinatario (`:`, `diciendo que`, `que`...), se envía el cuerpo del input. Sin delimitador, se acepta el del modelo solo si aparece en el input y no contiene el destinatario. Un delimitador ambiguo falla.
+- **Mensaje:** si hay un delimitador junto al destinatario (`:`, `diciendo que`, `que`...), se envía el cuerpo del input. Sin delimitador, el del modelo debe coincidir con todo el texto que sigue al destinatario, porque un fragmento no demuestra nada. Si el destinatario va al final, basta con que aparezca en el input y no lo contenga. Un delimitador ambiguo falla.
 
 La regla del mensaje existe porque el mock devuelve los primeros 50 caracteres del comando cuando no hay `:`, y `00` para `cita a las 10:00`. En la ejecución medida se activó en 2.061 peticiones. `test_guardrails_against_mock.py` pasa el `provider/responses.py` real por los guardrails con los 4 prompts de k6: toda respuesta que no es un rechazo se recupera con destinatario, canal y mensaje exactos.
 
@@ -112,5 +118,6 @@ Cada módulo se escribió con rojo, verde y refactor, y cada commit deja los tes
 
 - El estado y las colas viven en memoria: un reinicio pierde peticiones y solo funciona con un proceso. En producción harían falta almacenamiento durable, un broker y un limitador distribuido.
 - La detección del cuerpo cubre conectores habituales en español e inglés. Lo que queda fuera se valida de forma estricta y puede fallar.
+- La validación es léxica, no semántica: si el texto tras el destinatario describe el mensaje o incluye un asunto, puede enviarse tal cual (ver holdout).
 - Con un delimitador claro manda el texto del usuario, aunque el modelo proponga otro: es una decisión consciente para no enviar paráfrasis.
 - Un `message: null` se reintenta aunque el modelo tenga razón y la petición no traiga cuerpo: gasta una llamada de más, sin efecto en el resultado.

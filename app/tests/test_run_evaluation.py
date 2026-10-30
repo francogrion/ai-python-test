@@ -139,6 +139,10 @@ def test_report_file_name_is_valid_for_any_model_name():
     assert report_file_name("hf.co/Qwen/Model-GGUF:Q4_K_M", "abcdef123456") == "hf.co-Qwen-Model-GGUF-Q4_K_M-abcdef12.json"
 
 
+def test_another_dataset_does_not_overwrite_the_main_report():
+    assert report_file_name("model", "abcdef123456", dataset="holdout") == "model-abcdef12-holdout.json"
+
+
 def test_report_records_what_produced_the_numbers():
     results = run_cases([CASE], lambda messages: "no", repeats=1)
     report = build_report(results, model="some-model", repeats=1)

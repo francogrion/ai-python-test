@@ -79,9 +79,10 @@ def build_report(results: list[CaseResult], model: str, repeats: int) -> dict:
     }
 
 
-def report_file_name(model: str, prompt_sha256: str) -> str:
+def report_file_name(model: str, prompt_sha256: str, dataset: str = "cases") -> str:
     safe_model = model.replace("/", "-").replace(":", "-")
-    return f"{safe_model}-{prompt_sha256[:8]}.json"
+    suffix = "" if dataset == "cases" else f"-{dataset}"
+    return f"{safe_model}-{prompt_sha256[:8]}{suffix}.json"
 
 
 def anthropic_asker(model: str) -> Callable[[list[dict[str, str]]], str]:
@@ -116,7 +117,7 @@ def main() -> None:
     results = run_cases(load_cases(arguments.cases), asker(arguments.model), arguments.repeats)
     report = build_report(results, arguments.model, arguments.repeats)
 
-    output = ROOT / "results" / report_file_name(arguments.model, report["prompt_sha256"])
+    output = ROOT / "results" / report_file_name(arguments.model, report["prompt_sha256"], arguments.cases.stem)
     output.parent.mkdir(exist_ok=True)
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 

@@ -1,0 +1,14 @@
+[
+  {"id": "h-colon", "input": "Escríbele a lucia@correo.es: la factura ya está pagada", "expected": {"to": "lucia@correo.es", "message": "la factura ya está pagada", "type": "email"}},
+  {"id": "h-diciendo", "input": "Mensaje al 611222333 diciendo que ya salí de casa", "expected": {"to": "611222333", "message": "ya salí de casa", "type": "sms"}},
+  {"id": "h-no-delimiter", "input": "Tell dan@corp.io the server is back online", "expected": {"to": "dan@corp.io", "message": "the server is back online", "type": "email"}},
+  {"id": "h-subject-colon", "input": "Email to sara@mail.com about the invoice: it is overdue", "expected": {"to": "sara@mail.com", "message": "it is overdue", "type": "email"}},
+  {"id": "h-para-decirle", "input": "Manda un SMS a 644555666 para decirle que llegué bien", "expected": {"to": "644555666", "message": "llegué bien", "type": "sms"}},
+  {"id": "h-de-que", "input": "Avísale a tomas@empresa.com de que la reunión se canceló", "expected": {"to": "tomas@empresa.com", "message": "la reunión se canceló", "type": "email"}},
+  {"id": "h-saying", "input": "Please text 622333444 saying the car is ready", "expected": {"to": "622333444", "message": "the car is ready", "type": "sms"}},
+  {"id": "h-keep-case", "input": "Mail a rosa@test.es: Mañana NO abrimos.", "expected": {"to": "rosa@test.es", "message": "Mañana NO abrimos.", "type": "email"}},
+
+  {"id": "h-no-body", "input": "Manda un correo a rosa@test.es", "expected": null},
+  {"id": "h-described", "input": "Escribe a rosa@test.es algo bonito", "expected": null},
+  {"id": "h-two-phones", "input": "Envía un SMS a 644555666 y otro a 633444555: hola", "expected": null}
+]
