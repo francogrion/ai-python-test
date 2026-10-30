@@ -1,0 +1,62 @@
+from types import SimpleNamespace
+
+from prompts import FEW_SHOT, SYSTEM_PROMPT, build_messages
+from run import answer_text, build_report, request_params, run_cases
+
+CASE = {
+    "id": "ok",
+    "input": "Mail a ana@test.com: Hola",
+    "expected": {"to": "ana@test.com", "message": "Hola", "type": "email"},
+}
+GOOD = '{"to": "ana@test.com", "message": "Hola", "type": "email"}'
+
+
+def text(value):
+    return SimpleNamespace(type="text", text=value)
+
+
+def test_system_prompt_goes_in_the_top_level_field():
+    params = request_params(build_messages("hola"), "some-model")
+    assert params["system"] == SYSTEM_PROMPT
+    assert params["model"] == "some-model"
+
+
+def test_few_shot_turns_are_sent_as_real_turns_with_the_request_last():
+    params = request_params(build_messages("hola"), "some-model")
+    assert params["messages"] == [*FEW_SHOT, {"role": "user", "content": "hola"}]
+
+
+def test_answer_text_skips_thinking_blocks():
+    response = SimpleNamespace(content=[SimpleNamespace(type="thinking", thinking=""), text("hola")])
+    assert answer_text(response) == "hola"
+
+
+def test_answer_text_of_a_refusal_is_empty():
+    assert answer_text(SimpleNamespace(content=[])) == ""
+
+
+def test_each_case_runs_once_per_repeat_with_the_production_messages():
+    seen = []
+
+    def ask(messages):
+        seen.append(messages)
+        return GOOD
+
+    results = run_cases([CASE], ask, repeats=3)
+
+    assert len(results) == 3
+    assert seen == [build_messages(CASE["input"])] * 3
+    assert all(result.pipeline_correct for result in results)
+
+
+def test_report_records_what_produced_the_numbers():
+    results = run_cases([CASE], lambda messages: "no", repeats=1)
+    report = build_report(results, model="some-model", repeats=1)
+
+    assert report["model"] == "some-model"
+    assert report["repeats"] == 1
+    assert len(report["prompt_sha256"]) == 64
+    assert report["summary"]["pipeline_correct"] == 0
+    assert report["failures"][0]["case_id"] == "ok"
+    assert report["failures"][0]["answer"] == "no"
+    assert len(report["results"]) == 1
