@@ -1,7 +1,7 @@
 """Evaluates the production prompt against a real Claude model.
 
-Sends each case as the service would on its first attempt, and scores the answer
-on its own and through the production guardrails. Nothing is ever notified.
+Sends each case as the service would, retry included, and scores the answer on
+its own and through the production guardrails. Nothing is ever notified.
 """
 
 import argparse
@@ -9,7 +9,7 @@ import hashlib
 import json
 import sys
 from collections.abc import Callable
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -39,11 +39,16 @@ def answer_text(response) -> str:
 
 
 def run_cases(cases: list[dict], ask: Callable[[list[dict[str, str]]], str], repeats: int) -> list[CaseResult]:
-    return [
-        score_case(case, ask(build_messages(case["input"])))
-        for case in cases
-        for _ in range(repeats)
-    ]
+    return [_run_case(case, ask) for case in cases for _ in range(repeats)]
+
+
+def _run_case(case: dict, ask: Callable[[list[dict[str, str]]], str]) -> CaseResult:
+    """Same budget as the service: one retry, and only for an unusable answer."""
+    first = score_case(case, ask(build_messages(case["input"])))
+    if first.retry_reason is None:
+        return first
+    second = score_case(case, ask(build_messages(case["input"], first.retry_reason)))
+    return replace(second, raw_correct=first.raw_correct, retried=True)
 
 
 def build_report(results: list[CaseResult], model: str, repeats: int) -> dict:

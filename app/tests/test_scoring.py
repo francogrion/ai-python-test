@@ -64,6 +64,7 @@ def test_summary_counts_each_metric():
         "raw_correct": 1,
         "pipeline_correct": 2,
         "incorrect_acceptances": 0,
+        "retries": 0,
     }
 
 

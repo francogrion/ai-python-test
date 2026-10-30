@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 from prompts import FEW_SHOT, SYSTEM_PROMPT, build_messages
 from run import answer_text, build_report, request_params, run_cases
+from scoring import summarize
 
 CASE = {
     "id": "ok",
@@ -53,6 +54,57 @@ def test_each_case_runs_once_per_repeat_with_the_production_messages():
     assert len(results) == 3
     assert seen == [build_messages(CASE["input"])] * 3
     assert all(result.pipeline_correct for result in results)
+
+
+def test_an_unusable_answer_is_asked_again_like_the_service_does():
+    seen = []
+    answers = iter(["Lo siento, no puedo.", GOOD])
+
+    def ask(messages):
+        seen.append(messages)
+        return next(answers)
+
+    result = run_cases([CASE], ask, repeats=1)[0]
+
+    assert seen == [build_messages(CASE["input"]), build_messages(CASE["input"], retry_reason="no_json")]
+    assert result.retried is True
+    assert result.pipeline_correct is True
+    assert result.answer == GOOD
+
+
+def test_a_retry_is_only_tried_once():
+    calls = []
+
+    def ask(messages):
+        calls.append(messages)
+        return "no"
+
+    result = run_cases([CASE], ask, repeats=1)[0]
+
+    assert len(calls) == 2
+    assert result.pipeline_correct is False
+
+
+def test_a_final_rejection_is_not_asked_again():
+    calls = []
+    case = {"id": "none", "input": "Avisa a Pedro: hola", "expected": None}
+
+    def ask(messages):
+        calls.append(messages)
+        return "no"
+
+    result = run_cases([case], ask, repeats=1)[0]
+
+    assert len(calls) == 1
+    assert result.retried is False
+
+
+def test_the_summary_keeps_how_the_first_answer_did():
+    answers = iter(["no", GOOD])
+    results = run_cases([CASE], lambda messages: next(answers), repeats=1)
+
+    assert summarize(results)["raw_correct"] == 0
+    assert summarize(results)["retries"] == 1
 
 
 def test_report_records_what_produced_the_numbers():

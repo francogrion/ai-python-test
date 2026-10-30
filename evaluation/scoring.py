@@ -17,6 +17,8 @@ class CaseResult:
     raw_correct: bool
     pipeline_correct: bool
     incorrect_acceptance: bool
+    retry_reason: str | None = None
+    retried: bool = False
 
 
 def load_cases(path: Path) -> list[dict]:
@@ -37,6 +39,7 @@ def score_case(case: dict, answer: str) -> CaseResult:
         raw_correct=_raw_correct(answer, expected),
         pipeline_correct=pipeline_correct,
         incorrect_acceptance=accepted and not pipeline_correct,
+        retry_reason=result.reason if not accepted and result.retryable else None,
     )
 
 
@@ -46,6 +49,7 @@ def summarize(results: list[CaseResult]) -> dict[str, int]:
         "raw_correct": sum(result.raw_correct for result in results),
         "pipeline_correct": sum(result.pipeline_correct for result in results),
         "incorrect_acceptances": sum(result.incorrect_acceptance for result in results),
+        "retries": sum(result.retried for result in results),
     }
 
 
