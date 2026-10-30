@@ -10,10 +10,10 @@ Suite oficial de k6 con `docker compose`, sin modificar `provider/`, `platform/`
 |---|---|
 | Checks de k6 | 100% (19.243 / 19.243) |
 | Disponibilidad | 100% (0 de 8.247 peticiones fallidas) |
-| Latencia HTTP media / p95 | 0,6 ms / 1,16 ms |
-| Llamadas a la IA por petición | 1,10 (3.034 / 2.749; umbral verde: 1,5) |
-| Entregadas al vaciarse la cola | 2.723 / 2.749 (99,1%) |
-| Fallos | 26, todos por rechazo de la IA en las dos llamadas |
+| Latencia HTTP media / p95 | 0,6 ms / 1,19 ms |
+| Llamadas a la IA por petición | 1,09 (2.986 / 2.749; umbral verde: 1,5) |
+| Entregadas al vaciarse la cola | 2.729 / 2.749 (99,3%) |
+| Fallos | 20, todos por rechazo de la IA en las dos llamadas |
 | Respuestas 429 del provider | 0 |
 
 k6 acaba en 40 s, pero la entrega está limitada por el provider: la cola tarda unos 10 minutos en vaciarse a 4,5 envíos/s. Durante la prueba, la mayoría de peticiones sigue en `queued` o `processing`, que son estados válidos.
@@ -79,10 +79,11 @@ El mock ignora el system prompt, así que el prompt se midió aparte con `evalua
 | Correctas sin ayuda de los guardrails | 93 / 99 |
 | Correctas tras los guardrails | 99 / 99 |
 | Aceptaciones incorrectas | 0 |
+| Reintentos con pista | 9, todos aceptados por la API |
 
-Las 6 respuestas no exactas son `two-recipients` y `ambiguous-body`: el modelo devolvió un JSON no nulo y los guardrails las rechazaron, que era lo esperado. El prompt no necesitó cambios. El informe está en `evaluation/results/`. Es anterior a la regla `multiple_recipients` y a mover la pista de reintento; ninguna de las dos toca el system prompt ni los ejemplos.
+Las 6 respuestas no exactas son `two-recipients` y `ambiguous-body`: el modelo devolvió datos en lugar de `null` y los guardrails rechazaron la petición, que era lo esperado. En `two-recipients`, el reintento eligió un solo destinatario en las 3 repeticiones, y `multiple_recipients` lo detuvo. El prompt no necesitó cambios. El informe está en `evaluation/results/`.
 
-**Alcance:** son pocos casos escritos a mano, con un solo modelo. Mide el primer intento, no el reintento. Sirve como comprobación, no como estimación de precisión en producción.
+**Alcance:** son pocos casos escritos a mano, con un solo modelo. Sirve como comprobación, no como estimación de precisión en producción.
 
 ## Guardrails
 
@@ -93,7 +94,7 @@ El modelo propone y el texto del usuario decide.
 - **Canal:** lo decide el formato del destinatario.
 - **Mensaje:** si hay un delimitador junto al destinatario (`:`, `diciendo que`, `que`...), se envía el cuerpo del input. Sin delimitador, se acepta el del modelo solo si aparece en el input y no contiene el destinatario. Un delimitador ambiguo falla.
 
-La regla del mensaje existe porque el mock devuelve los primeros 50 caracteres del comando cuando no hay `:`, y `00` para `cita a las 10:00`. En la ejecución medida se activó en 2.051 peticiones. `test_guardrails_against_mock.py` pasa el `provider/responses.py` real por los guardrails con los 4 prompts de k6: toda respuesta que no es un rechazo se recupera con destinatario, canal y mensaje exactos.
+La regla del mensaje existe porque el mock devuelve los primeros 50 caracteres del comando cuando no hay `:`, y `00` para `cita a las 10:00`. En la ejecución medida se activó en 2.061 peticiones. `test_guardrails_against_mock.py` pasa el `provider/responses.py` real por los guardrails con los 4 prompts de k6: toda respuesta que no es un rechazo se recupera con destinatario, canal y mensaje exactos.
 
 ## Resiliencia
 
@@ -112,3 +113,4 @@ Cada módulo se escribió con rojo, verde y refactor, y cada commit deja los tes
 - El estado y las colas viven en memoria: un reinicio pierde peticiones y solo funciona con un proceso. En producción harían falta almacenamiento durable, un broker y un limitador distribuido.
 - La detección del cuerpo cubre conectores habituales en español e inglés. Lo que queda fuera se valida de forma estricta y puede fallar.
 - Con un delimitador claro manda el texto del usuario, aunque el modelo proponga otro: es una decisión consciente para no enviar paráfrasis.
+- Un `message: null` se reintenta aunque el modelo tenga razón y la petición no traiga cuerpo: gasta una llamada de más, sin efecto en el resultado.
