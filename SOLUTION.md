@@ -10,10 +10,10 @@ Suite oficial de k6 con `docker compose`, sin modificar `provider/`, `platform/`
 |---|---|
 | Checks de k6 | 100% (19.243 / 19.243) |
 | Disponibilidad | 100% (0 de 8.247 peticiones fallidas) |
-| Latencia HTTP media / p95 | 0,7 ms / 1,74 ms |
-| Llamadas a la IA por petición | 1,10 (3.014 / 2.749; umbral verde: 1,5) |
-| Entregadas al vaciarse la cola | 2.728 / 2.749 (99,2%) |
-| Fallos | 21, todos por rechazo de la IA en las dos llamadas |
+| Latencia HTTP media / p95 | 0,9 ms / 1,54 ms |
+| Llamadas a la IA por petición | 1,09 (2.997 / 2.749; umbral verde: 1,5) |
+| Entregadas al vaciarse la cola | 2.727 / 2.749 (99,2%) |
+| Fallos | 22, todos por rechazo de la IA en las dos llamadas |
 | Respuestas 429 del provider | 0 |
 
 k6 acaba en 40 s, pero la entrega está limitada por el provider: la cola tarda unos 10 minutos en vaciarse a 4,5 envíos/s. Durante la prueba, la mayoría de peticiones sigue en `queued` o `processing`, que son estados válidos.
@@ -79,7 +79,7 @@ El mock ignora el system prompt, así que el prompt se midió aparte con `evalua
 | Correctas sin ayuda de los guardrails | 93 / 99 | 9 / 12 | 72 / 99 | 9 / 11 | 7 / 12 |
 | Correctas tras los guardrails | 99 / 99 | 12 / 12 | 99 / 99 | 10 / 11 | 10 / 12 |
 | Aceptaciones incorrectas | 0 | 0 | 0 | 0 | 2 |
-| Reintentos | 3 | 2 | 3 | 0 | 0 |
+| Reintentos | 3 | 2 | 3 | 0 | 1 |
 
 **Cómo leer estas cifras:**
 - Solo `holdout2` es una medida independiente: se escribió antes de los últimos cambios y no se ajustó nada después de correrlo. `cases` y `holdout` ya influyeron en los guardrails.
@@ -98,11 +98,11 @@ Son pocos casos escritos a mano: sirven como comprobación, no como estimación 
 El modelo propone y el texto del usuario decide.
 
 - **JSON:** primero parseo estricto; después un lector tolerante por tokens para comillas simples, claves sin comillas y objetos truncados. No reescribe el contenido de las cadenas, y un valor cortado se descarta, no se completa.
-- **Destinatario:** debe aparecer en el input y se envía tal como lo escribió el usuario. Si no hay ninguno, la petición falla sin llamar a la IA. Si va dirigida a varios, falla con `multiple_recipients`; los contactos dentro del cuerpo son contenido y no cuentan.
+- **Destinatario:** debe aparecer antes del cuerpo, porque un contacto tras `: ` es contenido, y se envía tal como lo escribió el usuario. Si no hay ninguno, la petición falla sin llamar a la IA. Si va dirigida a varios, falla con `multiple_recipients`; los contactos dentro del cuerpo son contenido y no cuentan.
 - **Canal:** lo decide el formato del destinatario.
 - **Mensaje:** si hay un delimitador junto al destinatario (`:`, `diciendo que`, `que`...), se envía el cuerpo del input. Sin delimitador, el del modelo debe coincidir con todo el texto que sigue al destinatario, porque un fragmento no demuestra nada. Si el destinatario va al final, basta con que aparezca en el input y no lo contenga. Un delimitador ambiguo, como un `:` alejado del destinatario, falla. Un `message: null` del modelo también, sin reintentar.
 
-La regla del mensaje existe porque el mock devuelve los primeros 50 caracteres del comando cuando no hay `:`, y `00` para `cita a las 10:00`. En la ejecución medida se activó en 2.029 peticiones. `test_guardrails_against_mock.py` pasa el `provider/responses.py` real por los guardrails con los 4 prompts de k6: toda respuesta que no es un rechazo se recupera con destinatario, canal y mensaje exactos.
+La regla del mensaje existe porque el mock devuelve los primeros 50 caracteres del comando cuando no hay `:`, y `00` para `cita a las 10:00`. En la ejecución medida se activó en 2.036 peticiones. `test_guardrails_against_mock.py` pasa el `provider/responses.py` real por los guardrails con los 4 prompts de k6: toda respuesta que no es un rechazo se recupera con destinatario, canal y mensaje exactos.
 
 ## Resiliencia
 
@@ -123,4 +123,5 @@ Cada módulo se escribió con rojo, verde y refactor, y cada commit deja los tes
 - La validación es léxica, no semántica: si el texto tras el destinatario describe el mensaje en lugar de serlo, puede enviarse tal cual cuando el modelo no devuelve `null`.
 - Un número de pedido se parece a un teléfono. Se detecta como candidato, y solo se descarta si el modelo devuelve `to: null` o el mensaje no se puede verificar.
 - El store olvida las peticiones terminadas más antiguas a partir de 100.000; las creadas y nunca procesadas no se limpian.
+- Pendientes conocidos del code review, menores: un contenido `null` de la IA acaba en `internal_error` sin reintento; `Retry-After` no tiene tope; una fecha `dd-mm-yyyy` con hora se detecta como teléfono; si el modelo copia un `que` inicial, se envía con él.
 - Con un delimitador claro manda el texto del usuario, aunque el modelo proponga otro: es una decisión consciente para no enviar paráfrasis.

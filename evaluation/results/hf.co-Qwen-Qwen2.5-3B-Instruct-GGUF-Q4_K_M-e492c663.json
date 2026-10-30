@@ -2,7 +2,7 @@
   "model": "hf.co/Qwen/Qwen2.5-3B-Instruct-GGUF:Q4_K_M",
   "repeats": 3,
   "prompt_sha256": "e492c663111fbbb9dc70bbf0fc2acd9a2fe15ac73afe117ce82d0761684deb38",
-  "created_at": "2026-10-30T11:24:11.446915+00:00",
+  "created_at": "2026-10-30T14:47:38.359089+00:00",
   "summary": {
     "total": 99,
     "raw_correct": 72,
