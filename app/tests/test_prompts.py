@@ -46,6 +46,10 @@ def test_unknown_retry_reason_still_gets_a_hint():
     assert build_messages(USER_INPUT, retry_reason="other")[0]["content"] != SYSTEM_PROMPT
 
 
+def test_examples_show_that_a_described_message_has_no_body():
+    assert any(json.loads(pair[1]["content"])["message"] is None for pair in example_pairs() if "@" in pair[0]["content"])
+
+
 def test_system_prompt_states_the_rules_guardrails_rely_on():
     for rule in ('"to"', '"message"', '"type"', "email", "sms", "JSON", "data"):
         assert rule in SYSTEM_PROMPT
@@ -59,6 +63,8 @@ def test_examples_pass_the_guardrails_untouched(user, assistant):
 
     if answer["to"] is None:
         assert result == Rejected("no_recipient", retryable=False)
+    elif answer["message"] is None:
+        assert result == Rejected("no_body", retryable=False)
     else:
         assert isinstance(result, Accepted)
         assert result.repairs == ()
