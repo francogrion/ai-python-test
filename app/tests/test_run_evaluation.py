@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from prompts import FEW_SHOT, SYSTEM_PROMPT, build_messages
-from run import answer_text, build_report, request_params, run_cases
+from run import answer_text, build_report, ollama_answer, ollama_payload, request_params, run_cases
 from scoring import summarize
 
 CASE = {
@@ -105,6 +105,26 @@ def test_the_summary_keeps_how_the_first_answer_did():
 
     assert summarize(results)["raw_correct"] == 0
     assert summarize(results)["retries"] == 1
+
+
+def test_ollama_keeps_the_conversation_as_it_is():
+    messages = build_messages("hola")
+    payload = ollama_payload(messages, "some-model")
+
+    assert payload["model"] == "some-model"
+    assert payload["messages"] == messages
+    assert payload["stream"] is False
+
+
+def test_ollama_is_deterministic_and_does_not_think():
+    payload = ollama_payload(build_messages("hola"), "some-model")
+
+    assert payload["options"]["temperature"] == 0
+    assert payload["think"] is False
+
+
+def test_ollama_answer_is_read_from_the_message():
+    assert ollama_answer({"message": {"role": "assistant", "content": "hola"}}) == "hola"
 
 
 def test_report_records_what_produced_the_numbers():

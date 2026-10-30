@@ -20,6 +20,7 @@ from prompts import FEW_SHOT, SYSTEM_PROMPT, build_messages  # noqa: E402
 from scoring import CaseResult, load_cases, score_case, summarize  # noqa: E402
 
 DEFAULT_MODEL = "claude-opus-5-5"
+OLLAMA_URL = "http://localhost:11434"
 
 
 def request_params(messages: list[dict[str, str]], model: str) -> dict:
@@ -31,6 +32,20 @@ def request_params(messages: list[dict[str, str]], model: str) -> dict:
         "messages": turns,
         "output_config": {"effort": "low"},
     }
+
+
+def ollama_payload(messages: list[dict[str, str]], model: str) -> dict:
+    return {
+        "model": model,
+        "messages": messages,
+        "stream": False,
+        "think": False,
+        "options": {"temperature": 0, "num_ctx": 4096},
+    }
+
+
+def ollama_answer(response: dict) -> str:
+    return response["message"]["content"]
 
 
 def answer_text(response) -> str:
@@ -64,24 +79,40 @@ def build_report(results: list[CaseResult], model: str, repeats: int) -> dict:
     }
 
 
-def main() -> None:
+def anthropic_asker(model: str) -> Callable[[list[dict[str, str]]], str]:
     import anthropic
 
+    client = anthropic.Anthropic()
+    return lambda messages: answer_text(client.messages.create(**request_params(messages, model)))
+
+
+def ollama_asker(model: str) -> Callable[[list[dict[str, str]]], str]:
+    import httpx
+
+    client = httpx.Client(base_url=OLLAMA_URL, timeout=300)
+
+    def ask(messages: list[dict[str, str]]) -> str:
+        response = client.post("/api/chat", json=ollama_payload(messages, model))
+        response.raise_for_status()
+        return ollama_answer(response.json())
+
+    return ask
+
+
+def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--backend", choices=["anthropic", "ollama"], default="anthropic")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--cases", type=Path, default=ROOT / "cases.json")
     arguments = parser.parse_args()
 
-    client = anthropic.Anthropic()
-
-    def ask(messages: list[dict[str, str]]) -> str:
-        return answer_text(client.messages.create(**request_params(messages, arguments.model)))
-
-    results = run_cases(load_cases(arguments.cases), ask, arguments.repeats)
+    asker = ollama_asker if arguments.backend == "ollama" else anthropic_asker
+    results = run_cases(load_cases(arguments.cases), asker(arguments.model), arguments.repeats)
     report = build_report(results, arguments.model, arguments.repeats)
 
-    output = ROOT / "results" / f"{arguments.model}-{report['prompt_sha256'][:8]}.json"
+    file_name = f"{arguments.model}-{report['prompt_sha256'][:8]}.json".replace(":", "-")
+    output = ROOT / "results" / file_name
     output.parent.mkdir(exist_ok=True)
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
