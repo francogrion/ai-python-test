@@ -1,3 +1,5 @@
+import time
+
 from recipients import find_recipients, is_email, same_recipient
 
 
@@ -48,6 +50,16 @@ def test_different_recipients_do_not_match():
     assert not same_recipient("ana@test.com", "eva@test.com")
     assert not same_recipient("600111222", "600111223")
     assert not same_recipient("ana@test.com", "600111222")
+
+
+def test_a_date_with_a_time_is_not_a_phone():
+    assert find_recipients("Recuerda la cita del 2026-11-03 10:00") == []
+
+
+def test_a_long_text_without_recipients_is_scanned_in_linear_time():
+    start = time.perf_counter()
+    assert find_recipients("a" * 200_000) == []
+    assert time.perf_counter() - start < 0.5
 
 
 def test_is_email():

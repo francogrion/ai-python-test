@@ -57,6 +57,10 @@ def test_create_validates_the_body(client, body):
     assert client.post("/v1/requests", json=body).status_code == 422
 
 
+def test_create_rejects_an_oversized_input(client):
+    assert client.post("/v1/requests", json={"user_input": "a" * 5_000}).status_code == 422
+
+
 def test_a_new_request_is_queued(client):
     request_id = create(client)
     assert client.get(f"/v1/requests/{request_id}").json() == {"id": request_id, "status": "queued"}

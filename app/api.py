@@ -13,7 +13,7 @@ router = APIRouter()
 
 
 class CreateRequest(BaseModel):
-    user_input: str = Field(min_length=1)
+    user_input: str = Field(min_length=1, max_length=2_000)
 
 
 class CreatedResponse(BaseModel):

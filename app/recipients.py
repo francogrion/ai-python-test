@@ -2,8 +2,9 @@
 
 import re
 
-_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
-_PHONE = re.compile(r"(?<![\w+])\+?\d(?:[ -]?\d){8,14}(?!\w)")
+# The lookbehind tries each word only once, which keeps the scan linear on long inputs.
+_EMAIL = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+_PHONE = re.compile(r"(?<![\w+])(?!\d{4}-\d{2}-\d{2})\+?\d(?:[ -]?\d){8,14}(?!\w)")
 
 
 def find_recipients(text: str) -> list[str]:
