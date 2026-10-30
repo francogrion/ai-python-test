@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass
 
 from lenient_json import find_object
-from message_source import AmbiguousBody, source_body, text_after_recipient
+from message_source import AmbiguousBody, source_body, starts_with_bare_connector, text_after_recipient
 from models import Notification
 from recipients import find_recipients, is_email, same_recipient
 
@@ -51,11 +51,14 @@ def extract_notification(content: str, user_input: str) -> Accepted | Rejected:
     repairs = ["json_repaired"] if was_repaired else []
     fields = _normalize_keys(data, repairs)
 
+    if _says_null(data, "to"):
+        return Rejected("no_recipient", retryable=False)
+
     recipient = _resolve_recipient(fields.get("to"), user_input, repairs)
     if recipient is None:
         return Rejected("ambiguous_recipient", retryable=True)
 
-    message = _resolve_message(fields.get("message"), _says_no_body(data), user_input, recipient, repairs)
+    message = _resolve_message(fields.get("message"), _says_null(data, "message"), user_input, recipient, repairs)
     if isinstance(message, Rejected):
         return message
 
@@ -93,8 +96,9 @@ def _resolve_recipient(proposed: str | None, user_input: str, repairs: list[str]
     return None
 
 
-def _says_no_body(data: dict) -> bool:
-    return any(_ALIASES.get(key.strip().lower()) == "message" and value is None for key, value in data.items())
+def _says_null(data: dict, field: str) -> bool:
+    """An explicit null is the model's verdict; a missing key is only noise."""
+    return any(_ALIASES.get(key.strip().lower()) == field and value is None for key, value in data.items())
 
 
 def _resolve_message(
@@ -105,7 +109,11 @@ def _resolve_message(
     except AmbiguousBody:
         return Rejected("ambiguous_message", retryable=False)
 
+    remainder = text_after_recipient(user_input, recipient)
+
     if body is not None:
+        if proposed is not None and starts_with_bare_connector(remainder) and _same_text(proposed, remainder):
+            return remainder
         if proposed is None or proposed.casefold() != body.casefold():
             repairs.append("message_from_source")
         return body
@@ -116,24 +124,30 @@ def _resolve_message(
         return Rejected("missing_message", retryable=True)
 
     # With no delimiter a substring proves nothing, since any fragment would pass.
-    remainder = text_after_recipient(user_input, recipient)
     if remainder:
-        if _without_final_punctuation(proposed) == _without_final_punctuation(remainder):
+        if _same_text(proposed, remainder):
             return remainder
         return Rejected("message_unverified", retryable=False)
 
-    if proposed.casefold() not in user_input.casefold() or recipient.casefold() in proposed.casefold():
+    folded = proposed.casefold()
+    if folded not in user_input.casefold() or any(contact.casefold() in folded for contact in find_recipients(user_input)):
         return Rejected("message_unverified", retryable=False)
     return proposed
 
 
-def _without_final_punctuation(text: str) -> str:
-    return text.rstrip(".!?… ").casefold()
+def _same_text(first: str, second: str) -> bool:
+    return first.rstrip(".!?… ").casefold() == second.rstrip(".!?… ").casefold()
 
 
 def _routing_text(user_input: str, message: str) -> str:
-    """The request without its body: contacts inside the body are content, not addressees."""
-    return re.sub(re.escape(message), "", user_input, count=1, flags=re.IGNORECASE)
+    """The request without its body: contacts inside the body are content, not addressees.
+
+    The last occurrence is the body; an earlier one could be part of an address.
+    """
+    occurrences = list(re.finditer(re.escape(message), user_input, re.IGNORECASE))
+    if not occurrences:
+        return user_input
+    return user_input[:occurrences[-1].start()] + user_input[occurrences[-1].end():]
 
 
 def _resolve_channel(proposed: str | None, recipient: str, repairs: list[str]) -> str:

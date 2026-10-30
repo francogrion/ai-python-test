@@ -21,6 +21,11 @@ class AmbiguousBody(Exception):
     """A colon away from the recipient may start the real body, so the body is unclear."""
 
 
+def starts_with_bare_connector(text: str) -> bool:
+    """"que" and "that" can open the message itself, as in "que tal todo"."""
+    return re.match(r"(?:que|that)\b", text, re.IGNORECASE) is not None
+
+
 def text_after_recipient(user_input: str, recipient: str) -> str:
     """Return everything after the recipient, without the punctuation that separates it."""
     location = re.search(re.escape(recipient), user_input, re.IGNORECASE)
