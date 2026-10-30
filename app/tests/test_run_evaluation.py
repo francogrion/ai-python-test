@@ -1,7 +1,15 @@
 from types import SimpleNamespace
 
 from prompts import FEW_SHOT, SYSTEM_PROMPT, build_messages
-from run import answer_text, build_report, ollama_answer, ollama_payload, request_params, run_cases
+from run import (
+    answer_text,
+    build_report,
+    ollama_answer,
+    ollama_payload,
+    report_file_name,
+    request_params,
+    run_cases,
+)
 from scoring import summarize
 
 CASE = {
@@ -125,6 +133,10 @@ def test_ollama_is_deterministic_and_does_not_think():
 
 def test_ollama_answer_is_read_from_the_message():
     assert ollama_answer({"message": {"role": "assistant", "content": "hola"}}) == "hola"
+
+
+def test_report_file_name_is_valid_for_any_model_name():
+    assert report_file_name("hf.co/Qwen/Model-GGUF:Q4_K_M", "abcdef123456") == "hf.co-Qwen-Model-GGUF-Q4_K_M-abcdef12.json"
 
 
 def test_report_records_what_produced_the_numbers():

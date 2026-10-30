@@ -79,6 +79,11 @@ def build_report(results: list[CaseResult], model: str, repeats: int) -> dict:
     }
 
 
+def report_file_name(model: str, prompt_sha256: str) -> str:
+    safe_model = model.replace("/", "-").replace(":", "-")
+    return f"{safe_model}-{prompt_sha256[:8]}.json"
+
+
 def anthropic_asker(model: str) -> Callable[[list[dict[str, str]]], str]:
     import anthropic
 
@@ -111,8 +116,7 @@ def main() -> None:
     results = run_cases(load_cases(arguments.cases), asker(arguments.model), arguments.repeats)
     report = build_report(results, arguments.model, arguments.repeats)
 
-    file_name = f"{arguments.model}-{report['prompt_sha256'][:8]}.json".replace(":", "-")
-    output = ROOT / "results" / file_name
+    output = ROOT / "results" / report_file_name(arguments.model, report["prompt_sha256"])
     output.parent.mkdir(exist_ok=True)
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
