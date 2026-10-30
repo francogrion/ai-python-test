@@ -1,0 +1,137 @@
+{
+  "model": "hf.co/Qwen/Qwen2.5-3B-Instruct-GGUF:Q4_K_M",
+  "repeats": 1,
+  "prompt_sha256": "e492c663111fbbb9dc70bbf0fc2acd9a2fe15ac73afe117ce82d0761684deb38",
+  "created_at": "2026-10-30T10:44:16.818273+00:00",
+  "summary": {
+    "total": 11,
+    "raw_correct": 8,
+    "pipeline_correct": 10,
+    "incorrect_acceptances": 0,
+    "retries": 0
+  },
+  "failures": [
+    {
+      "case_id": "h-subject-colon",
+      "answer": "{\"to\": \"sara@mail.com\", \"message\": \"about the invoice: it is overdue\", \"type\": \"email\"}",
+      "outcome": "rejected:ambiguous_message",
+      "raw_correct": false,
+      "pipeline_correct": false,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    }
+  ],
+  "results": [
+    {
+      "case_id": "h-colon",
+      "answer": "{\"to\": \"lucia@correo.es\", \"message\": \"la factura ya está pagada\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-diciendo",
+      "answer": "{\"to\": \"611222333\", \"message\": \"ya salí de casa\", \"type\": \"sms\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-no-delimiter",
+      "answer": "{\"to\": \"dan@corp.io\", \"message\": \"the server is back online\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-subject-colon",
+      "answer": "{\"to\": \"sara@mail.com\", \"message\": \"about the invoice: it is overdue\", \"type\": \"email\"}",
+      "outcome": "rejected:ambiguous_message",
+      "raw_correct": false,
+      "pipeline_correct": false,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-para-decirle",
+      "answer": "{\"to\": \"644555666\", \"message\": \"llegué bien\", \"type\": \"sms\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-de-que",
+      "answer": "{\"to\": \"tomas@empresa.com\", \"message\": \"la reunión se canceló\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-saying",
+      "answer": "{\"to\": \"622333444\", \"message\": \"el carro está listo\", \"type\": \"sms\"}",
+      "outcome": "accepted",
+      "raw_correct": false,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-keep-case",
+      "answer": "{\"to\": \"rosa@test.es\", \"message\": \"Mañana NO abrimos.\", \"type\": \"email\"}",
+      "outcome": "accepted",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-no-body",
+      "answer": "{\"to\": \"rosa@test.es\", \"message\": null, \"type\": \"email\"}",
+      "outcome": "rejected:no_body",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-described",
+      "answer": "{\"to\": \"rosa@test.es\", \"message\": null, \"type\": \"email\"}",
+      "outcome": "rejected:no_body",
+      "raw_correct": true,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    },
+    {
+      "case_id": "h-two-phones",
+      "answer": "{\"to\": \"644555666\", \"message\": \"hola\", \"type\": \"sms\"}{\"to\": \"633444555\", \"message\": \"hola\", \"type\": \"sms\"}",
+      "outcome": "rejected:ambiguous_message",
+      "raw_correct": false,
+      "pipeline_correct": true,
+      "incorrect_acceptance": false,
+      "retry_reason": null,
+      "retried": false
+    }
+  ]
+}
