@@ -15,6 +15,10 @@ from message_source import AmbiguousBody, source_body
         ("Send an email to ana@test.com saying that the report is ready", "ana@test.com", "the report is ready"),
         ("Escribe a ana@test.com, diciendo: hola", "ana@test.com", "hola"),
         ("SMS a 600111222 con el mensaje: tu pedido salió", "600111222", "tu pedido salió"),
+        ("Notify ana@test.com that the build failed", "ana@test.com", "the build failed"),
+        ("Send bob@x.io a message saying hello", "bob@x.io", "hello"),
+        ("Manda a ana@test.com un mensaje diciendo que llego tarde", "ana@test.com", "llego tarde"),
+        ("Recuérdale a Juan (600111222) que traiga el DNI", "600111222", "traiga el DNI"),
     ],
 )
 def test_body_after_a_delimiter_next_to_the_recipient(user_input, recipient, body):

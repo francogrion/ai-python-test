@@ -39,8 +39,8 @@ def test_refusing_a_valid_request_is_a_miss_but_not_an_incorrect_acceptance():
 def test_wrong_payload_let_through_is_an_incorrect_acceptance():
     case = {
         "id": "free",
-        "input": "Mail a ana@test.com nos vemos mañana",
-        "expected": {"to": "ana@test.com", "message": "nos vemos mañana", "type": "email"},
+        "input": "Mail a ana@test.com: nos vemos",
+        "expected": {"to": "ana@test.com", "message": "otro mensaje", "type": "email"},
     }
     result = score_case(case, '{"to": "ana@test.com", "message": "nos vemos", "type": "email"}')
     assert (result.pipeline_correct, result.incorrect_acceptance) == (False, True)

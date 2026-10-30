@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass
 
 from lenient_json import find_object
-from message_source import AmbiguousBody, source_body
+from message_source import AmbiguousBody, source_body, text_after_recipient
 from models import Notification
 from recipients import find_recipients, is_email, same_recipient
 
@@ -106,9 +106,21 @@ def _resolve_message(proposed: str | None, user_input: str, recipient: str, repa
 
     if proposed is None:
         return Rejected("missing_message", retryable=True)
+
+    # With no delimiter a substring proves nothing, since any fragment would pass.
+    remainder = text_after_recipient(user_input, recipient)
+    if remainder:
+        if _without_final_punctuation(proposed) == _without_final_punctuation(remainder):
+            return remainder
+        return Rejected("message_unverified", retryable=False)
+
     if proposed.casefold() not in user_input.casefold() or recipient.casefold() in proposed.casefold():
         return Rejected("message_unverified", retryable=False)
     return proposed
+
+
+def _without_final_punctuation(text: str) -> str:
+    return text.rstrip(".!?… ").casefold()
 
 
 def _routing_text(user_input: str, message: str) -> str:

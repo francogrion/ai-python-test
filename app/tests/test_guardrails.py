@@ -97,16 +97,17 @@ def test_model_choice_among_several_recipients_is_kept():
     assert result.notification.to == "ana@test.com"
 
 
-@pytest.mark.parametrize(
-    "user_input",
-    [
-        "Mail a ana@test.com y eva@test.com: hola",
-        "Mail a ana@test.com y eva@test.com hola",
-        "SMS al 600111222 y a ana@test.com: hola",
-    ],
-)
-def test_choosing_one_of_several_addressees_is_final(user_input):
-    result = rejected('{"to": "ana@test.com", "message": "hola", "type": "email"}', user_input)
+def test_choosing_the_first_of_several_addressees_is_final():
+    result = rejected(
+        '{"to": "ana@test.com", "message": "hola", "type": "email"}', "Mail a ana@test.com y eva@test.com: hola"
+    )
+    assert result.retryable is False
+
+
+def test_choosing_the_addressee_next_to_the_body_is_final():
+    result = rejected(
+        '{"to": "ana@test.com", "message": "hola", "type": "email"}', "SMS al 600111222 y a ana@test.com: hola"
+    )
     assert (result.reason, result.retryable) == ("multiple_recipients", False)
 
 
@@ -157,6 +158,38 @@ def test_command_returned_as_message_is_replaced_by_the_body():
 def test_without_delimiter_a_message_found_in_the_input_is_accepted():
     result = accepted('{"to": "ana@test.com", "message": "nos vemos", "type": "email"}', "Mail a ana@test.com nos vemos")
     assert result.notification.message == "nos vemos"
+
+
+def test_without_delimiter_a_fragment_of_the_text_is_unverified():
+    result = rejected('{"to": "ana@test.com", "message": "nos vemos", "type": "email"}', "Mail a ana@test.com nos vemos mañana")
+    assert (result.reason, result.retryable) == ("message_unverified", False)
+
+
+def test_without_delimiter_a_described_message_is_unverified():
+    result = rejected(
+        '{"to": "ana@test.com", "message": "cariñoso", "type": "email"}', "Envía a ana@test.com un mensaje cariñoso"
+    )
+    assert result.reason == "message_unverified"
+
+
+def test_without_delimiter_the_user_text_is_sent_even_if_the_model_drops_punctuation():
+    result = accepted('{"to": "ana@test.com", "message": "nos vemos", "type": "email"}', "Mail a ana@test.com Nos vemos.")
+    assert result.notification.message == "Nos vemos."
+
+
+def test_a_comma_after_the_recipient_is_not_part_of_the_message():
+    result = accepted('{"to": "bob@x.io", "message": "the meeting moved", "type": "email"}', "Email bob@x.io, the meeting moved")
+    assert result.notification.message == "the meeting moved"
+
+
+def test_with_nothing_after_the_recipient_a_message_found_in_the_input_is_accepted():
+    result = accepted('{"to": "ana@test.com", "message": "llego tarde", "type": "email"}', "Dile llego tarde a ana@test.com")
+    assert result.notification.message == "llego tarde"
+
+
+def test_two_addressees_without_delimiter_are_not_accepted():
+    result = rejected('{"to": "ana@test.com", "message": "hola", "type": "email"}', "Mail a ana@test.com y eva@test.com hola")
+    assert result.retryable is False
 
 
 def test_without_delimiter_the_whole_command_is_unverified():
