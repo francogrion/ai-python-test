@@ -51,12 +51,13 @@ _RETRY_HINTS = {
 def build_messages(user_input: str, retry_reason: str | None = None) -> list[dict[str, str]]:
     """The request always goes last and literal.
 
-    A failed answer is not sent back, because that anchors the model on it. With a
-    real model the request should also be delimited, but the mock reads this
-    message's text directly, so wrapping it would change what it extracts.
+    A failed answer is not sent back, because that anchors the model on it. The hint
+    goes in the system prompt because the Messages API does not accept a system
+    message between an assistant and a user turn. With a real model the request
+    should also be delimited, but the mock reads this message's text directly, so
+    wrapping it would change what it extracts.
     """
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}, *FEW_SHOT]
+    system = SYSTEM_PROMPT
     if retry_reason is not None:
-        messages.append({"role": "system", "content": _RETRY_HINTS.get(retry_reason, _GENERIC_HINT)})
-    messages.append({"role": "user", "content": user_input})
-    return messages
+        system = f"{SYSTEM_PROMPT}\n\nRETRY\n{_RETRY_HINTS.get(retry_reason, _GENERIC_HINT)}"
+    return [{"role": "system", "content": system}, *FEW_SHOT, {"role": "user", "content": user_input}]

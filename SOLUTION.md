@@ -66,7 +66,7 @@ flowchart LR
 
 ## Prompt
 
-El mensaje enviado es: system prompt, 4 ejemplos few-shot, una pista si es un reintento, y la petición literal al final. El prompt fija un contrato de salida estricto, una regla por campo y trata la petición como datos, no como instrucciones. Un test comprueba que cada ejemplo pasa los guardrails sin reparaciones, para que prompt y validación no se desalineen.
+El mensaje enviado es: system prompt (con una pista añadida si es un reintento), 4 ejemplos few-shot y la petición literal al final. El prompt fija un contrato de salida estricto, una regla por campo y trata la petición como datos, no como instrucciones. Un test comprueba que cada ejemplo pasa los guardrails sin reparaciones, para que prompt y validación no se desalineen.
 
 El reintento no reenvía la respuesta errónea, porque ancla al modelo en ella. La petición va sin delimitadores porque el mock lee el texto literal de ese mensaje; con un modelo real, delimitarla añadiría protección frente a inyecciones.
 
@@ -80,7 +80,7 @@ El mock ignora el system prompt, así que el prompt se midió aparte con `evalua
 | Correctas tras los guardrails | 99 / 99 |
 | Aceptaciones incorrectas | 0 |
 
-Las 6 respuestas no exactas son `two-recipients` y `ambiguous-body`: el modelo devolvió un JSON no nulo y los guardrails las rechazaron, que era lo esperado. El prompt no necesitó cambios. El informe está en `evaluation/results/`.
+Las 6 respuestas no exactas son `two-recipients` y `ambiguous-body`: el modelo devolvió un JSON no nulo y los guardrails las rechazaron, que era lo esperado. El prompt no necesitó cambios. El informe está en `evaluation/results/`. Es anterior a la regla `multiple_recipients` y a mover la pista de reintento; ninguna de las dos toca el system prompt ni los ejemplos.
 
 **Alcance:** son pocos casos escritos a mano, con un solo modelo. Mide el primer intento, no el reintento. Sirve como comprobación, no como estimación de precisión en producción.
 
@@ -89,7 +89,7 @@ Las 6 respuestas no exactas son `two-recipients` y `ambiguous-body`: el modelo d
 El modelo propone y el texto del usuario decide.
 
 - **JSON:** primero parseo estricto; después un lector tolerante por tokens para comillas simples, claves sin comillas y objetos truncados. No reescribe el contenido de las cadenas, y un valor cortado se descarta, no se completa.
-- **Destinatario:** debe aparecer en el input y se envía tal como lo escribió el usuario. Si no hay ninguno, la petición falla sin llamar a la IA.
+- **Destinatario:** debe aparecer en el input y se envía tal como lo escribió el usuario. Si no hay ninguno, la petición falla sin llamar a la IA. Si va dirigida a varios, falla con `multiple_recipients`; los contactos dentro del cuerpo son contenido y no cuentan.
 - **Canal:** lo decide el formato del destinatario.
 - **Mensaje:** si hay un delimitador junto al destinatario (`:`, `diciendo que`, `que`...), se envía el cuerpo del input. Sin delimitador, se acepta el del modelo solo si aparece en el input y no contiene el destinatario. Un delimitador ambiguo falla.
 
@@ -112,5 +112,3 @@ Cada módulo se escribió con rojo, verde y refactor, y cada commit deja los tes
 - El estado y las colas viven en memoria: un reinicio pierde peticiones y solo funciona con un proceso. En producción harían falta almacenamiento durable, un broker y un limitador distribuido.
 - La detección del cuerpo cubre conectores habituales en español e inglés. Lo que queda fuera se valida de forma estricta y puede fallar.
 - Con un delimitador claro manda el texto del usuario, aunque el modelo proponga otro: es una decisión consciente para no enviar paráfrasis.
-- Con varios destinatarios en la petición, si el modelo elige solo uno se acepta. En la evaluación no ocurrió, pero los guardrails no lo impiden.
-- La pista de reintento es un mensaje `system` justo antes de la petición. El mock lo admite, pero la API de Anthropic exige que ese mensaje siga a uno de `user`, así que habría que moverla al usar un modelo real.

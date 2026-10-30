@@ -121,9 +121,8 @@ async def test_a_refusal_is_asked_again_once_with_a_hint(harness):
 
     assert record.status is Status.SENT
     first, second = h.provider.ai_calls
-    assert second[-2]["role"] == "system"
-    assert len(second) == len(first) + 1
-    assert second[-1] == first[-1]
+    assert second[0]["content"] != first[0]["content"]
+    assert second[1:] == first[1:]
 
 
 async def test_the_ai_budget_is_two_calls(harness):

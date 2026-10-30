@@ -26,6 +26,12 @@ def test_few_shot_turns_are_sent_as_real_turns_with_the_request_last():
     assert params["messages"] == [*FEW_SHOT, {"role": "user", "content": "hola"}]
 
 
+def test_a_retry_only_sends_user_and_assistant_turns():
+    params = request_params(build_messages("hola", retry_reason="no_json"), "some-model")
+    assert params["system"] != SYSTEM_PROMPT
+    assert {message["role"] for message in params["messages"]} == {"user", "assistant"}
+
+
 def test_answer_text_skips_thinking_blocks():
     response = SimpleNamespace(content=[SimpleNamespace(type="thinking", thinking=""), text("hola")])
     assert answer_text(response) == "hola"

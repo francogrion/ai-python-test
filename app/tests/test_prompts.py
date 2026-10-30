@@ -30,19 +30,20 @@ def test_examples_alternate_user_and_assistant():
     assert all(user["role"] == "user" and assistant["role"] == "assistant" for user, assistant in example_pairs())
 
 
-def test_retry_adds_a_system_hint_before_the_request():
-    messages = build_messages(USER_INPUT, retry_reason="no_json")
-    assert messages[-2]["role"] == "system"
-    assert "JSON" in messages[-2]["content"]
-    assert messages[-1] == {"role": "user", "content": USER_INPUT}
+def test_retry_appends_a_hint_to_the_system_prompt():
+    system = build_messages(USER_INPUT, retry_reason="no_json")[0]
+    assert system["role"] == "system"
+    assert system["content"].startswith(SYSTEM_PROMPT)
+    assert "no JSON object" in system["content"]
+
+
+def test_retry_keeps_the_conversation_as_it_was():
+    # The Messages API rejects a system message between an assistant and a user turn.
+    assert build_messages(USER_INPUT, retry_reason="no_json")[1:] == build_messages(USER_INPUT)[1:]
 
 
 def test_unknown_retry_reason_still_gets_a_hint():
-    assert build_messages(USER_INPUT, retry_reason="other")[-2]["role"] == "system"
-
-
-def test_first_attempt_has_no_hint():
-    assert len(build_messages(USER_INPUT)) == len(FEW_SHOT) + 2
+    assert build_messages(USER_INPUT, retry_reason="other")[0]["content"] != SYSTEM_PROMPT
 
 
 def test_system_prompt_states_the_rules_guardrails_rely_on():
