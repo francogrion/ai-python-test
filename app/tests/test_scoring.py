@@ -51,8 +51,8 @@ def test_invalid_request_answered_with_nulls_is_correct():
     assert (result.raw_correct, result.pipeline_correct, result.incorrect_acceptance) == (True, True, False)
 
 
-def test_invalid_request_with_an_invented_body_is_an_incorrect_acceptance_if_accepted():
-    case = {"id": "x", "input": "Mail a ana@test.com y eva@test.com: hola", "expected": None}
+def test_accepting_a_request_that_should_fail_is_an_incorrect_acceptance():
+    case = {"id": "x", "input": "Mail a ana@test.com: hola", "expected": None}
     result = score_case(case, '{"to": "ana@test.com", "message": "hola", "type": "email"}')
     assert (result.pipeline_correct, result.incorrect_acceptance) == (False, True)
 

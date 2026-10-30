@@ -97,6 +97,35 @@ def test_model_choice_among_several_recipients_is_kept():
     assert result.notification.to == "ana@test.com"
 
 
+@pytest.mark.parametrize(
+    "user_input",
+    [
+        "Mail a ana@test.com y eva@test.com: hola",
+        "Mail a ana@test.com y eva@test.com hola",
+        "SMS al 600111222 y a ana@test.com: hola",
+    ],
+)
+def test_choosing_one_of_several_addressees_is_final(user_input):
+    result = rejected('{"to": "ana@test.com", "message": "hola", "type": "email"}', user_input)
+    assert (result.reason, result.retryable) == ("multiple_recipients", False)
+
+
+def test_the_last_of_several_addressees_is_also_rejected():
+    result = rejected(
+        '{"to": "eva@test.com", "message": "hola", "type": "email"}',
+        "Mail a ana@test.com y eva@test.com: hola",
+    )
+    assert result.reason == "multiple_recipients"
+
+
+def test_a_contact_inside_a_body_without_delimiter_is_not_an_addressee():
+    result = accepted(
+        '{"to": "ana@test.com", "message": "habla con eva@test.com", "type": "email"}',
+        "Mail a ana@test.com habla con eva@test.com",
+    )
+    assert result.notification.to == "ana@test.com"
+
+
 def test_input_without_recipient_is_final():
     result = rejected('{"to": "x@y.com", "message": "hola"}', "Avisa a Pedro: hola")
     assert (result.reason, result.retryable) == ("no_recipient", False)

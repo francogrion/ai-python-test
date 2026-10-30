@@ -4,6 +4,7 @@ The model proposes; what the user wrote decides. Each repair is reported so it
 can be counted, and anything that cannot be verified is rejected, never guessed.
 """
 
+import re
 from dataclasses import dataclass
 
 from lenient_json import find_object
@@ -58,6 +59,9 @@ def extract_notification(content: str, user_input: str) -> Accepted | Rejected:
     if isinstance(message, Rejected):
         return message
 
+    if len(find_recipients(_routing_text(user_input, message))) > 1:
+        return Rejected("multiple_recipients", retryable=False)
+
     channel = _resolve_channel(fields.get("type"), recipient, repairs)
     notification = Notification(to=recipient, message=message, type=channel)
     return Accepted(notification, tuple(repairs))
@@ -105,6 +109,11 @@ def _resolve_message(proposed: str | None, user_input: str, recipient: str, repa
     if proposed.casefold() not in user_input.casefold() or recipient.casefold() in proposed.casefold():
         return Rejected("message_unverified", retryable=False)
     return proposed
+
+
+def _routing_text(user_input: str, message: str) -> str:
+    """The request without its body: contacts inside the body are content, not addressees."""
+    return re.sub(re.escape(message), "", user_input, count=1, flags=re.IGNORECASE)
 
 
 def _resolve_channel(proposed: str | None, recipient: str, repairs: list[str]) -> str:
