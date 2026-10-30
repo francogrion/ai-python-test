@@ -10,10 +10,10 @@ Suite oficial de k6 con `docker compose`, sin modificar `provider/`, `platform/`
 |---|---|
 | Checks de k6 | 100% (19.243 / 19.243) |
 | Disponibilidad | 100% (0 de 8.247 peticiones fallidas) |
-| Latencia HTTP media / p95 | 0,7 ms / 1,49 ms |
-| Llamadas a la IA por petición | 1,10 (3.020 / 2.749; umbral verde: 1,5) |
-| Entregadas al vaciarse la cola | 2.721 / 2.749 (99,0%) |
-| Fallos | 28, todos por rechazo de la IA en las dos llamadas |
+| Latencia HTTP media / p95 | 0,7 ms / 1,74 ms |
+| Llamadas a la IA por petición | 1,10 (3.014 / 2.749; umbral verde: 1,5) |
+| Entregadas al vaciarse la cola | 2.728 / 2.749 (99,2%) |
+| Fallos | 21, todos por rechazo de la IA en las dos llamadas |
 | Respuestas 429 del provider | 0 |
 
 k6 acaba en 40 s, pero la entrega está limitada por el provider: la cola tarda unos 10 minutos en vaciarse a 4,5 envíos/s. Durante la prueba, la mayoría de peticiones sigue en `queued` o `processing`, que son estados válidos.
@@ -76,19 +76,19 @@ El mock ignora el system prompt, así que el prompt se midió aparte con `evalua
 
 | Prompt final | Opus `cases` | Opus `holdout2` | Qwen `cases` | Qwen `holdout` | Qwen `holdout2` |
 |---|---|---|---|---|---|
-| Correctas sin ayuda de los guardrails | 93 / 99 | 9 / 12 | 73 / 99 | 8 / 11 | 7 / 12 |
+| Correctas sin ayuda de los guardrails | 93 / 99 | 9 / 12 | 72 / 99 | 9 / 11 | 7 / 12 |
 | Correctas tras los guardrails | 99 / 99 | 12 / 12 | 99 / 99 | 10 / 11 | 10 / 12 |
 | Aceptaciones incorrectas | 0 | 0 | 0 | 0 | 2 |
-| Reintentos | 3 | 2 | 3 | 0 | 1 |
+| Reintentos | 3 | 2 | 3 | 0 | 0 |
 
 **Cómo leer estas cifras:**
 - Solo `holdout2` es una medida independiente: se escribió antes de los últimos cambios y no se ajustó nada después de correrlo. `cases` y `holdout` ya influyeron en los guardrails.
-- La primera corrida de Qwen dio 90/99 y 9 aceptaciones incorrectas: fragmentos del mensaje que pasaban por aparecer en el input. A temperatura 0 las repeticiones son idénticas, así que fueron 3 casos distintos.
+- La primera corrida de Qwen dio 90/99 y 9 aceptaciones incorrectas: fragmentos del mensaje que pasaban por aparecer en el input. Fueron 3 casos distintos; a temperatura 0 las repeticiones apenas varían.
 - Las 2 aceptaciones incorrectas de `holdout2` son mensajes descritos (`something encouraging`, `un saludo de cumpleaños`). Distinguirlos requiere entender el significado: una regla léxica no alcanza, y este modelo pequeño ignora esa instrucción del prompt.
 - El fallo restante de `holdout` es seguro: `h-subject-colon` se rechaza por ambiguo, aunque el cuerpo estaba claro para una persona.
 
 - Las 2 aceptaciones incorrectas solo aparecen con el modelo pequeño: Opus devolvió `null` en esos casos. El modelo elegido importa tanto como los guardrails.
-- Opus no corrió `holdout`, que ya había influido en los cambios. Los holdouts se corrieron una sola vez por caso.
+- Opus no corrió `holdout`, que ya había influido en los cambios. Los holdouts se corrieron una sola vez por caso. Tras las correcciones del code review, sus respuestas guardadas se recalificaron con los guardrails finales, con el mismo resultado; no se repitieron contra la API.
 - Todos los reintentos de Opus fueron aceptados por la API.
 
 Son pocos casos escritos a mano: sirven como comprobación, no como estimación de precisión en producción.
@@ -102,13 +102,13 @@ El modelo propone y el texto del usuario decide.
 - **Canal:** lo decide el formato del destinatario.
 - **Mensaje:** si hay un delimitador junto al destinatario (`:`, `diciendo que`, `que`...), se envía el cuerpo del input. Sin delimitador, el del modelo debe coincidir con todo el texto que sigue al destinatario, porque un fragmento no demuestra nada. Si el destinatario va al final, basta con que aparezca en el input y no lo contenga. Un delimitador ambiguo, como un `:` alejado del destinatario, falla. Un `message: null` del modelo también, sin reintentar.
 
-La regla del mensaje existe porque el mock devuelve los primeros 50 caracteres del comando cuando no hay `:`, y `00` para `cita a las 10:00`. En la ejecución medida se activó en 2.025 peticiones. `test_guardrails_against_mock.py` pasa el `provider/responses.py` real por los guardrails con los 4 prompts de k6: toda respuesta que no es un rechazo se recupera con destinatario, canal y mensaje exactos.
+La regla del mensaje existe porque el mock devuelve los primeros 50 caracteres del comando cuando no hay `:`, y `00` para `cita a las 10:00`. En la ejecución medida se activó en 2.029 peticiones. `test_guardrails_against_mock.py` pasa el `provider/responses.py` real por los guardrails con los 4 prompts de k6: toda respuesta que no es un rechazo se recupera con destinatario, canal y mensaje exactos.
 
 ## Resiliencia
 
 - **IA:** máximo 2 llamadas por petición. Solo se repite ante respuestas inservibles o fallos de transporte.
-- **Notify:** el limitador GCRA permite como máximo 46 envíos cada 10 s. Se reintentan 429, 5xx y errores de conexión con `trace_id` estable, y un 429 pausa todos los envíos.
-- **Timeout de lectura en notify:** no se reintenta, porque el envío pudo haberse entregado y se duplicaría. Queda `failed` con `delivery_unknown`.
+- **Notify:** el limitador GCRA permite como máximo 46 envíos cada 10 s. Se reintentan 429, 500, 503 y errores de conexión con `trace_id` estable, y un 429 pausa todos los envíos.
+- **Timeout de lectura o error 502/504 en notify:** no se reintentan, porque el envío pudo haberse entregado y se duplicaría. Queda `failed` con `delivery_unknown`.
 - **Timeouts generosos:** el mock escribe métricas de forma síncrona y se ralentiza bajo carga.
 - **Aislamiento:** un error inesperado falla esa petición, no el worker. Con la cola llena se responde 202 y la petición queda `failed` (`overloaded`).
 
@@ -121,4 +121,6 @@ Cada módulo se escribió con rojo, verde y refactor, y cada commit deja los tes
 - El estado y las colas viven en memoria: un reinicio pierde peticiones y solo funciona con un proceso. En producción harían falta almacenamiento durable, un broker y un limitador distribuido.
 - La detección del cuerpo cubre conectores habituales en español e inglés. Lo que queda fuera se valida de forma estricta y puede fallar.
 - La validación es léxica, no semántica: si el texto tras el destinatario describe el mensaje en lugar de serlo, puede enviarse tal cual cuando el modelo no devuelve `null`.
+- Un número de pedido se parece a un teléfono. Se detecta como candidato, y solo se descarta si el modelo devuelve `to: null` o el mensaje no se puede verificar.
+- El store olvida las peticiones terminadas más antiguas a partir de 100.000; las creadas y nunca procesadas no se limpian.
 - Con un delimitador claro manda el texto del usuario, aunque el modelo proponga otro: es una decisión consciente para no enviar paráfrasis.

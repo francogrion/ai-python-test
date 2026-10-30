@@ -2,10 +2,10 @@
   "model": "hf.co/Qwen/Qwen2.5-3B-Instruct-GGUF:Q4_K_M",
   "repeats": 1,
   "prompt_sha256": "e492c663111fbbb9dc70bbf0fc2acd9a2fe15ac73afe117ce82d0761684deb38",
-  "created_at": "2026-10-30T10:44:16.818273+00:00",
+  "created_at": "2026-10-30T11:24:19.337032+00:00",
   "summary": {
     "total": 11,
-    "raw_correct": 8,
+    "raw_correct": 9,
     "pipeline_correct": 10,
     "incorrect_acceptances": 0,
     "retries": 0
@@ -85,9 +85,9 @@
     },
     {
       "case_id": "h-saying",
-      "answer": "{\"to\": \"622333444\", \"message\": \"el carro está listo\", \"type\": \"sms\"}",
+      "answer": "{\"to\": \"622333444\", \"message\": \"the car is ready\", \"type\": \"sms\"}",
       "outcome": "accepted",
-      "raw_correct": false,
+      "raw_correct": true,
       "pipeline_correct": true,
       "incorrect_acceptance": false,
       "retry_reason": null,
