@@ -7,7 +7,8 @@ _CONNECTORS = (
     "indicando que", "indicando", "avisando que", "avisando", "que diga", "y dile que", "dile que",
     "de que", "con el mensaje", "con el texto", "el mensaje", "saying that", "saying",
     "with the message", "with the text", "un mensaje diciendo que", "un mensaje diciendo",
-    "a message saying that", "a message saying", "that", "que",
+    "a message saying that", "a message saying", "para decirle que", "para decirles que",
+    "para decir que", "para avisarle que", "para avisar que", "to say that", "to say", "that", "que",
 )
 _ALTERNATIVES = "|".join(sorted(_CONNECTORS, key=len, reverse=True))
 _DELIMITER = re.compile(
@@ -17,7 +18,7 @@ _DELIMITER = re.compile(
 
 
 class AmbiguousBody(Exception):
-    """A connector follows the recipient, but a later colon may start the real body."""
+    """A colon away from the recipient may start the real body, so the body is unclear."""
 
 
 def text_after_recipient(user_input: str, recipient: str) -> str:
@@ -36,6 +37,8 @@ def source_body(user_input: str, recipient: str) -> str | None:
 
     match = _DELIMITER.match(user_input, location.end())
     if match is None:
+        if re.search(r":\s", user_input[location.end():]):
+            raise AmbiguousBody(user_input[location.end():])
         return None
 
     body = match["body"].strip()

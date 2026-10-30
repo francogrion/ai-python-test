@@ -19,6 +19,8 @@ from message_source import AmbiguousBody, source_body
         ("Send bob@x.io a message saying hello", "bob@x.io", "hello"),
         ("Manda a ana@test.com un mensaje diciendo que llego tarde", "ana@test.com", "llego tarde"),
         ("Recuérdale a Juan (600111222) que traiga el DNI", "600111222", "traiga el DNI"),
+        ("Manda un SMS a 644555666 para decirle que llegué bien", "644555666", "llegué bien"),
+        ("Send a text to 644555666 to say that I arrived", "644555666", "I arrived"),
     ],
 )
 def test_body_after_a_delimiter_next_to_the_recipient(user_input, recipient, body):
@@ -51,6 +53,15 @@ def test_empty_body_gives_no_body():
 
 def test_unknown_recipient_gives_no_body():
     assert source_body("Mail a ana@test.com: hola", "eva@test.com") is None
+
+
+def test_a_colon_away_from_the_recipient_is_ambiguous():
+    with pytest.raises(AmbiguousBody):
+        source_body("Email to sara@mail.com about the invoice: it is overdue", "sara@mail.com")
+
+
+def test_a_time_without_a_delimiter_is_not_ambiguous():
+    assert source_body("Mail a ana@test.com nos vemos a las 10:00", "ana@test.com") is None
 
 
 def test_a_connector_followed_by_a_later_colon_is_ambiguous():

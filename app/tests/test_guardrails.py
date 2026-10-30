@@ -210,6 +210,11 @@ def test_without_delimiter_a_missing_message_is_worth_asking_again():
     assert (result.reason, result.retryable) == ("missing_message", True)
 
 
+def test_an_explicit_null_message_means_there_is_no_body_and_is_final():
+    result = rejected('{"to": "ana@test.com", "message": null, "type": "email"}', "Envía un mail a ana@test.com")
+    assert (result.reason, result.retryable) == ("no_body", False)
+
+
 def test_ambiguous_body_is_final():
     result = rejected(
         '{"to": "pedro@x.com", "message": "vuelve el lunes", "type": "email"}',

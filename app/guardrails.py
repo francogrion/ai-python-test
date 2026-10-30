@@ -55,7 +55,7 @@ def extract_notification(content: str, user_input: str) -> Accepted | Rejected:
     if recipient is None:
         return Rejected("ambiguous_recipient", retryable=True)
 
-    message = _resolve_message(fields.get("message"), user_input, recipient, repairs)
+    message = _resolve_message(fields.get("message"), _says_no_body(data), user_input, recipient, repairs)
     if isinstance(message, Rejected):
         return message
 
@@ -93,7 +93,13 @@ def _resolve_recipient(proposed: str | None, user_input: str, repairs: list[str]
     return None
 
 
-def _resolve_message(proposed: str | None, user_input: str, recipient: str, repairs: list[str]) -> str | Rejected:
+def _says_no_body(data: dict) -> bool:
+    return any(_ALIASES.get(key.strip().lower()) == "message" and value is None for key, value in data.items())
+
+
+def _resolve_message(
+    proposed: str | None, no_body: bool, user_input: str, recipient: str, repairs: list[str]
+) -> str | Rejected:
     try:
         body = source_body(user_input, recipient)
     except AmbiguousBody:
@@ -104,6 +110,8 @@ def _resolve_message(proposed: str | None, user_input: str, recipient: str, repa
             repairs.append("message_from_source")
         return body
 
+    if no_body:
+        return Rejected("no_body", retryable=False)
     if proposed is None:
         return Rejected("missing_message", retryable=True)
 
