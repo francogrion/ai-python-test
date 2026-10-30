@@ -1,0 +1,35 @@
+"""Read the message body straight from what the user wrote."""
+
+import re
+
+_CONNECTORS = (
+    "diciéndole que", "diciendole que", "diciendo que", "diciéndole", "diciendole", "diciendo",
+    "indicando que", "indicando", "avisando que", "avisando", "que diga", "y dile que", "dile que",
+    "de que", "con el mensaje", "con el texto", "el mensaje", "saying that", "saying",
+    "with the message", "with the text", "que",
+)
+_ALTERNATIVES = "|".join(sorted(_CONNECTORS, key=len, reverse=True))
+_DELIMITER = re.compile(
+    rf"\s*[,;–—-]?\s*(?:(?P<connector>{_ALTERNATIVES})\b\s*(?P<labelled>:)?|:)\s*(?P<body>.+)$",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+class AmbiguousBody(Exception):
+    """A connector follows the recipient, but a later colon may start the real body."""
+
+
+def source_body(user_input: str, recipient: str) -> str | None:
+    """Return the text after a delimiter next to the recipient, if there is one."""
+    location = re.search(re.escape(recipient), user_input, re.IGNORECASE)
+    if location is None:
+        return None
+
+    match = _DELIMITER.match(user_input, location.end())
+    if match is None:
+        return None
+
+    body = match["body"].strip()
+    if match["connector"] and not match["labelled"] and re.search(r":\s", body):
+        raise AmbiguousBody(body)
+    return body or None
