@@ -70,7 +70,19 @@ El mensaje enviado es: system prompt, 4 ejemplos few-shot, una pista si es un re
 
 El reintento no reenvía la respuesta errónea, porque ancla al modelo en ella. La petición va sin delimitadores porque el mock lee el texto literal de ese mensaje; con un modelo real, delimitarla añadiría protección frente a inyecciones.
 
-**Límite:** el mock ignora el system prompt, así que la calidad del prompt no está medida con un LLM real.
+### Evaluación con un modelo real
+
+El mock ignora el system prompt, así que el prompt se midió aparte con `evaluation/run.py`: 33 casos en español e inglés (26 válidos y 7 que deben rechazarse), 3 repeticiones cada uno, en Claude Opus 5.5 con esfuerzo `low`. No se envía ninguna notificación.
+
+| Métrica | Resultado |
+|---|---|
+| Correctas sin ayuda de los guardrails | 93 / 99 |
+| Correctas tras los guardrails | 99 / 99 |
+| Aceptaciones incorrectas | 0 |
+
+Las 6 respuestas no exactas son `two-recipients` y `ambiguous-body`: el modelo devolvió un JSON no nulo y los guardrails las rechazaron, que era lo esperado. El prompt no necesitó cambios. El informe está en `evaluation/results/`.
+
+**Alcance:** son pocos casos escritos a mano, con un solo modelo. Mide el primer intento, no el reintento. Sirve como comprobación, no como estimación de precisión en producción.
 
 ## Guardrails
 
@@ -100,3 +112,5 @@ Cada módulo se escribió con rojo, verde y refactor, y cada commit deja los tes
 - El estado y las colas viven en memoria: un reinicio pierde peticiones y solo funciona con un proceso. En producción harían falta almacenamiento durable, un broker y un limitador distribuido.
 - La detección del cuerpo cubre conectores habituales en español e inglés. Lo que queda fuera se valida de forma estricta y puede fallar.
 - Con un delimitador claro manda el texto del usuario, aunque el modelo proponga otro: es una decisión consciente para no enviar paráfrasis.
+- Con varios destinatarios en la petición, si el modelo elige solo uno se acepta. En la evaluación no ocurrió, pero los guardrails no lo impiden.
+- La pista de reintento es un mensaje `system` justo antes de la petición. El mock lo admite, pero la API de Anthropic exige que ese mensaje siga a uno de `user`, así que habría que moverla al usar un modelo real.
